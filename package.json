@@ -1,0 +1,15 @@
+{
+  "name": "lethargia",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "bcrypt": "5.1.1",
+    "ws": "8.18.0"
+  },
+  "allowScripts": {
+    "bcrypt@5.1.1": true
+  }
+}

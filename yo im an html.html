@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>letharix Testing Server</title>
+  <style>
+    @keyframes bgShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes titleBounce {
+      0%, 100% { transform: translateY(0px) rotate(-1deg); }
+      50%       { transform: translateY(-8px) rotate(1deg); }
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 6px #ff79c6; }
+      50%       { box-shadow: 0 0 20px #ff79c6, 0 0 40px #bd93f9; }
+    }
+
+    @keyframes dotPulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.4); }
+    }
+
+    @keyframes msgPop {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Comic Sans MS', 'Comic Sans', cursive;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 30px 20px;
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460, #533483);
+      background-size: 400% 400%;
+      animation: bgShift 10s ease infinite;
+      color: #eee;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 2.2rem;
+      color: #ff79c6;
+      text-shadow: 0 0 10px #ff79c6, 0 0 30px #bd93f9;
+      animation: titleBounce 2.5s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      backdrop-filter: blur(8px);
+      animation: fadeSlideIn 0.4s ease both;
+    }
+
+    #status {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff5555;
+      animation: dotPulse 1.2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .dot.connected {
+      background: #50fa7b;
+      box-shadow: 0 0 8px #50fa7b;
+    }
+
+    #log {
+      height: 260px;
+      overflow-y: auto;
+      font-size: 13px;
+      padding: 4px 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    #log::-webkit-scrollbar { width: 6px; }
+    #log::-webkit-scrollbar-track { background: transparent; }
+    #log::-webkit-scrollbar-thumb { background: #bd93f9; border-radius: 3px; }
+
+    #log div {
+      animation: msgPop 0.2s ease both;
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+
+    .msg-in  { color: #8be9fd; }
+    .msg-out { color: #50fa7b; }
+    .msg-err { color: #ff5555; background: rgba(255,85,85,0.08); }
+    .msg-sys { color: #6272a4; }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    input {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      color: #eee;
+      padding: 9px 14px;
+      font-size: 14px;
+      font-family: 'Comic Sans MS', cursive;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 260px;
+    }
+
+    input:focus {
+      border-color: #bd93f9;
+      box-shadow: 0 0 8px #bd93f9;
+    }
+
+    button {
+      font-family: 'Comic Sans MS', cursive;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 9px 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+      background: linear-gradient(135deg, #bd93f9, #ff79c6);
+      color: #1a1a2e;
+      box-shadow: 0 4px 14px rgba(189,147,249,0.4);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    button:hover {
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 6px 20px rgba(189,147,249,0.6);
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.97);
+    }
+
+    button#btnDisconnect {
+      background: linear-gradient(135deg, #ff5555, #ff79c6);
+      box-shadow: 0 4px 14px rgba(255,85,85,0.4);
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      margin: 6px 0 14px;
+    }
+
+    input.small { width: 80px; }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🌐 WebSocket Test Client</h2>
+
+  <div class="card">
+    <div id="status">
+      <span class="dot" id="dot"></span>
+      <span id="statusText">Disconnected</span>
+    </div>
+    <div class="btn-row">
+      <button onclick="connect()">✅ Connect</button>
+      <button id="btnDisconnect" onclick="disconnect()">❌ Disconnect</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="log"></div>
+  </div>
+
+  <div class="card">
+    <hr>
+    <div class="row">
+      <input id="chatInput" placeholder="Chat message..." />
+      <button onclick="sendChat()">💬 Send</button>
+    </div>
+    <div class="row">
+      <input id="usernameInput" placeholder="New username..." />
+      <button onclick="setUsername()">✏️ Set Name</button>
+    </div>
+    <div class="row">
+      <input id="xInput" class="small" placeholder="X" value="100" />
+      <input id="yInput" class="small" placeholder="Y" value="200" />
+      <button onclick="sendMove()">🕹️ Move</button>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+
+    function encode(obj) {
+      return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+    }
+
+    function decode(raw) {
+      return JSON.parse(decodeURIComponent(escape(atob(raw))));
+    }
+
+    function log(text, cls = 'msg-sys') {
+      const box = document.getElementById('log');
+      const line = document.createElement('div');
+      line.className = cls;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function setStatus(connected) {
+      document.getElementById('dot').className = 'dot' + (connected ? ' connected' : '');
+      document.getElementById('statusText').textContent = connected ? 'Connected' : 'Disconnected';
+    }
+
+    function connect() {
+      if (ws && ws.readyState === WebSocket.OPEN) { log('Already connected.'); return; }
+      ws = new WebSocket('ws://localhost:8080');
+      ws.onopen  = () => { log('Connected!', 'msg-out'); setStatus(true); };
+      ws.onclose = () => { log('Disconnected.', 'msg-err'); setStatus(false); };
+      ws.onerror = () => { log('Connection error.', 'msg-err'); };
+      ws.onmessage = (e) => {
+        try {
+          const msg = decode(e.data);
+          if (msg.type === 'chat') {
+            log(`💬 ${msg.from}: ${msg.text}`, 'msg-in');
+          } else if (msg.type === 'move') {
+            log(`🕹️ Player ${msg.id} moved to (${msg.x}, ${msg.y})`, 'msg-in');
+          } else if (msg.type === 'player_joined') {
+            log(`✅ ${msg.player.username} joined`, 'msg-in');
+          } else if (msg.type === 'player_left') {
+            log(`❌ Player ${msg.id} left`, 'msg-in');
+          } else if (msg.type === 'player_updated') {
+            log(`✏️ Player is now "${msg.player.username}"`, 'msg-in');
+          } else if (msg.type === 'error') {
+            log(`⚠️ Error: ${msg.message}`, 'msg-err');
+          } else {
+            log(`← ${JSON.stringify(msg)}`, 'msg-in');
+          }
+        } catch {
+          log('← (bad message) ' + e.data, 'msg-err');
+        }
+      };
+    }
+
+    function disconnect() {
+      if (ws) ws.close();
+    }
+
+    function send(obj) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) { log('Not connected!', 'msg-err'); return; }
+      ws.send(encode(obj));
+      if (obj.type === 'chat') log(`💬 You: ${obj.text}`, 'msg-out');
+      else log(`→ ${JSON.stringify(obj)}`, 'msg-out');
+    }
+
+    function sendChat() {
+      const text = document.getElementById('chatInput').value.trim();
+      if (text) {
+        send({ type: 'chat', text });
+        document.getElementById('chatInput').value = '';
+      }
+    }
+
+    function setUsername() {
+      const u = document.getElementById('usernameInput').value.trim();
+      if (u) send({ type: 'set_username', username: u });
+    }
+
+    function sendMove() {
+      send({
+        type: 'move',
+        x: parseFloat(document.getElementById('xInput').value),
+        y: parseFloat(document.getElementById('yInput').value),
+      });
+    }
+
+    document.getElementById('chatInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendChat();
+    });
+  </script>
+</body>
+</html>
