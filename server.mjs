@@ -11,31 +11,61 @@ const PORT = process.env.PORT || 8080;
 // ── Canvas config ──
 const CANVAS_W = 200;
 const CANVAS_H = 150;
-const PIXEL_COOLDOWN = 5000; // ms between placements per player
-const CANVAS_FILE = path.join(__dirname, 'canvas.json');
+const PIXEL_COOLDOWN = 5000;
+const CANVAS_KEY = 'lethargia:canvas';
 
-// ── Canvas state: flat array of color strings, index = y*W + x ──
+// ── Upstash Redis helpers (REST API, no extra dep) ──
+const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+async function redisSave(canvas) {
+  if (!REDIS_URL || !REDIS_TOKEN) return;
+  try {
+    await fetch(`${REDIS_URL}/set/${CANVAS_KEY}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: JSON.stringify(canvas) }),
+    });
+  } catch (e) { console.warn('Redis save failed:', e.message); }
+}
+
+async function redisLoad() {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
+  try {
+    const res = await fetch(`${REDIS_URL}/get/${CANVAS_KEY}`, {
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
+    });
+    const json = await res.json();
+    if (json.result) return JSON.parse(json.result);
+  } catch (e) { console.warn('Redis load failed:', e.message); }
+  return null;
+}
+
+// ── Canvas state ──
 let canvasData = new Array(CANVAS_W * CANVAS_H).fill('#1a1a2e');
 
-// Load persisted canvas if it exists
-if (fs.existsSync(CANVAS_FILE)) {
-  try {
-    const saved = JSON.parse(fs.readFileSync(CANVAS_FILE, 'utf8'));
-    if (Array.isArray(saved) && saved.length === CANVAS_W * CANVAS_H) {
-      canvasData = saved;
-      console.log('Canvas loaded from disk.');
-    }
-  } catch (e) {
-    console.warn('Could not load canvas:', e.message);
+// Load from Redis on startup, fall back to local file for dev
+async function initCanvas() {
+  const remote = await redisLoad();
+  if (remote && remote.length === CANVAS_W * CANVAS_H) {
+    canvasData = remote;
+    console.log('Canvas loaded from Redis.');
+    return;
+  }
+  const localFile = path.join(__dirname, 'canvas.json');
+  if (fs.existsSync(localFile)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(localFile, 'utf8'));
+      if (Array.isArray(saved) && saved.length === CANVAS_W * CANVAS_H) {
+        canvasData = saved;
+        console.log('Canvas loaded from local file.');
+      }
+    } catch {}
   }
 }
 
-// Save canvas to disk periodically (every 30s)
-setInterval(() => {
-  fs.writeFile(CANVAS_FILE, JSON.stringify(canvasData), err => {
-    if (err) console.warn('Canvas save failed:', err.message);
-  });
-}, 30000);
+// Save to Redis every 30s
+setInterval(() => redisSave(canvasData), 30000);
 
 // ── HTTP server ──
 const httpServer = http.createServer((req, res) => {
@@ -221,6 +251,9 @@ wss.on('connection', (ws, req) => {
         pixelCooldowns.set(playerId, now);
         logMsg('pixel', playerId, player.username, `(${x},${y}) ${color}`);
 
+        // Persist immediately (debounced — fire and forget)
+        redisSave(canvasData);
+
         broadcast({
           type: 'pixel_placed',
           x, y, color,
@@ -268,6 +301,7 @@ wss.on('connection', (ws, req) => {
           break;
         }
         canvasData.fill('#1a1a2e');
+        redisSave(canvasData);
         broadcast({ type: 'canvas_cleared', canvas: canvasData });
         console.log(`[${new Date().toLocaleTimeString()}] 🗑️  Aika cleared the canvas.`);
         break;
@@ -287,4 +321,10 @@ wss.on('connection', (ws, req) => {
   ws.on('error', err => console.error(`[ERROR] Player ${playerId}:`, err.message));
 });
 
-httpServer.listen(PORT, () => console.log(`lethargia running on http://localhost:${PORT}`));
+// Also save immediately on pixel placement (inside place_pixel handler below)
+// and save on canvas clear
+
+httpServer.listen(PORT, async () => {
+  await initCanvas();
+  console.log(`lethargia running on http://localhost:${PORT}`);
+});
