@@ -3,113 +3,228 @@
 <head>
   <meta charset="UTF-8">
   <title>lethargia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     @keyframes bgShift {
       0%   { background-position: 0% 50%; }
       50%  { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
-
     @keyframes titleBounce {
       0%, 100% { transform: translateY(0px) rotate(-1deg); }
       50%       { transform: translateY(-8px) rotate(1deg); }
     }
-
-    @keyframes fadeSlideIn {
-      from { opacity: 0; transform: translateY(10px); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 6px #ff79c6; }
       50%       { box-shadow: 0 0 20px #ff79c6, 0 0 40px #bd93f9; }
     }
-
-    @keyframes dotPulse {
-      0%, 100% { transform: scale(1); }
-      50%       { transform: scale(1.4); }
-    }
-
     @keyframes msgPop {
-      from { opacity: 0; transform: translateX(-10px); }
+      from { opacity: 0; transform: translateX(-8px); }
       to   { opacity: 1; transform: translateX(0); }
     }
 
-    * {
-      box-sizing: border-box;
-      font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-    }
+    * { box-sizing: border-box; font-family: 'Comic Sans MS', 'Comic Sans', cursive; }
 
     body {
       margin: 0;
       min-height: 100vh;
-      padding: 30px 20px;
       background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460, #533483);
       background-size: 400% 400%;
       animation: bgShift 10s ease infinite;
       color: #eee;
     }
 
-    h2 {
-      text-align: center;
-      font-size: 2.2rem;
+    /* ── AUTH SCREEN ── */
+    #authScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      animation: fadeIn 0.5s ease both;
+    }
+
+    #authScreen h1 {
+      font-size: 3rem;
       color: #ff79c6;
       text-shadow: 0 0 10px #ff79c6, 0 0 30px #bd93f9;
       animation: titleBounce 2.5s ease-in-out infinite;
-      margin-bottom: 20px;
+      margin-bottom: 8px;
     }
 
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 14px;
-      backdrop-filter: blur(8px);
-      animation: fadeSlideIn 0.4s ease both;
+    #authScreen p {
+      color: #6272a4;
+      margin-bottom: 28px;
+      font-size: 14px;
     }
 
-    #status {
+    .auth-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 360px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .auth-card label {
+      font-size: 12px;
+      color: #bd93f9;
+      margin-bottom: 2px;
+      display: block;
+    }
+
+    .auth-card input {
+      width: 100%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      color: #eee;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: 'Comic Sans MS', cursive;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .auth-card input:focus {
+      border-color: #bd93f9;
+      box-shadow: 0 0 8px #bd93f9;
+    }
+
+    .auth-card button {
+      margin-top: 6px;
+      width: 100%;
+      font-family: 'Comic Sans MS', cursive;
+      font-size: 15px;
+      font-weight: bold;
+      padding: 11px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #bd93f9, #ff79c6);
+      color: #1a1a2e;
+      animation: pulse 2.5s ease-in-out infinite;
+      transition: transform 0.1s;
+    }
+
+    .auth-card button:hover { transform: translateY(-2px) scale(1.03); }
+    .auth-card button:active { transform: scale(0.97); }
+
+    #authError {
+      color: #ff5555;
+      font-size: 13px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    /* ── GAME SCREEN ── */
+    #gameScreen {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      padding: 12px;
+      gap: 10px;
+    }
+
+    #gameScreen.visible { display: flex; }
+
+    .top-bar {
       display: flex;
       align-items: center;
-      font-size: 14px;
-      margin-bottom: 14px;
-      gap: 8px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .top-bar h2 {
+      font-size: 1.4rem;
+      color: #ff79c6;
+      text-shadow: 0 0 8px #ff79c6;
+      margin: 0;
+      animation: titleBounce 2.5s ease-in-out infinite;
     }
 
     .dot {
       display: inline-block;
-      width: 12px;
-      height: 12px;
+      width: 10px; height: 10px;
       border-radius: 50%;
       background: #ff5555;
-      animation: dotPulse 1.2s ease-in-out infinite;
       flex-shrink: 0;
     }
+    .dot.connected { background: #50fa7b; box-shadow: 0 0 6px #50fa7b; }
 
-    .dot.connected {
-      background: #50fa7b;
-      box-shadow: 0 0 8px #50fa7b;
+    #statusText { font-size: 13px; color: #6272a4; }
+
+    .main-area {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
     }
 
-    #log {
-      height: 260px;
-      overflow-y: auto;
-      font-size: 13px;
-      padding: 4px 2px;
+    /* Canvas */
+    #gameCanvas {
+      flex: 1;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      display: block;
+      cursor: crosshair;
+    }
+
+    /* Side panel */
+    .side-panel {
+      width: 240px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 10px;
+      min-height: 0;
     }
 
-    #log::-webkit-scrollbar { width: 6px; }
-    #log::-webkit-scrollbar-track { background: transparent; }
-    #log::-webkit-scrollbar-thumb { background: #bd93f9; border-radius: 3px; }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 12px;
+      backdrop-filter: blur(8px);
+    }
+
+    .card-title {
+      font-size: 11px;
+      color: #bd93f9;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    /* Chat log */
+    #log {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-height: 0;
+    }
+
+    #log::-webkit-scrollbar { width: 4px; }
+    #log::-webkit-scrollbar-thumb { background: #bd93f9; border-radius: 2px; }
 
     #log div {
       animation: msgPop 0.2s ease both;
       padding: 2px 4px;
-      border-radius: 6px;
+      border-radius: 5px;
+      word-break: break-word;
     }
 
     .msg-in  { color: #8be9fd; }
@@ -117,128 +232,526 @@
     .msg-err { color: #ff5555; background: rgba(255,85,85,0.08); }
     .msg-sys { color: #6272a4; }
 
-    .btn-row {
+    /* Chat input */
+    .chat-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
     }
 
-    input {
+    .chat-row input {
+      flex: 1;
       background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
       color: #eee;
-      padding: 9px 14px;
-      font-size: 14px;
+      padding: 7px 10px;
+      font-size: 13px;
       font-family: 'Comic Sans MS', cursive;
       outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      width: 260px;
     }
 
-    input:focus {
-      border-color: #bd93f9;
-      box-shadow: 0 0 8px #bd93f9;
-    }
+    .chat-row input:focus { border-color: #bd93f9; }
 
-    button {
+    .chat-row button {
       font-family: 'Comic Sans MS', cursive;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
-      padding: 9px 18px;
+      padding: 7px 12px;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.2s;
       background: linear-gradient(135deg, #bd93f9, #ff79c6);
       color: #1a1a2e;
-      box-shadow: 0 4px 14px rgba(189,147,249,0.4);
-      animation: pulse 2.5s ease-in-out infinite;
+      transition: transform 0.1s;
     }
 
-    button:hover {
-      transform: translateY(-2px) scale(1.05);
-      box-shadow: 0 6px 20px rgba(189,147,249,0.6);
-    }
+    .chat-row button:hover { transform: scale(1.05); }
 
-    button:active {
-      transform: translateY(1px) scale(0.97);
-    }
-
-    button#btnDisconnect {
-      background: linear-gradient(135deg, #ff5555, #ff79c6);
-      box-shadow: 0 4px 14px rgba(255,85,85,0.4);
-    }
-
-    hr {
-      border: none;
-      border-top: 1px solid rgba(255,255,255,0.1);
-      margin: 6px 0 14px;
-    }
-
-    input.small { width: 80px; }
-
-    .row {
+    /* Players list */
+    #playerList {
+      font-size: 12px;
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 120px;
+      overflow-y: auto;
     }
+
+    #playerList::-webkit-scrollbar { width: 4px; }
+    #playerList::-webkit-scrollbar-thumb { background: #bd93f9; border-radius: 2px; }
+
+    .player-entry {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 6px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .player-color {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Controls hint */
+    .hint {
+      font-size: 11px;
+      color: #6272a4;
+      line-height: 1.7;
+    }
+
+    /* Ban input */
+    .ban-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .ban-row input {
+      flex: 1;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      color: #eee;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: 'Comic Sans MS', cursive;
+      outline: none;
+    }
+
+    .ban-row button {
+      font-family: 'Comic Sans MS', cursive;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff5555, #ff79c6);
+      color: #1a1a2e;
+      transition: transform 0.1s;
+    }
+
+    #adminPanel { display: none; }
+    #adminPanel.visible { display: block; }
   </style>
 </head>
 <body>
 
-  <h2>🌐 lethargia</h2>
+  <!-- ── AUTH SCREEN ── -->
+  <div id="authScreen">
+    <h1>lethargia</h1>
+    <p>enter a username to join</p>
+    <div class="auth-card">
+      <div>
+        <label>Username</label>
+        <input id="authUsername" placeholder="your name..." maxlength="32" autocomplete="off" />
+      </div>
+      <div id="authPasswordWrap" style="display:none">
+        <label>Password <span style="color:#6272a4">(Aika only)</span></label>
+        <input id="authPassword" type="password" placeholder="••••••••" />
+      </div>
+      <div id="authError"></div>
+      <button onclick="joinGame()">🎮 Join</button>
+    </div>
+  </div>
 
-  <div class="card">
-    <div id="status">
+  <!-- ── GAME SCREEN ── -->
+  <div id="gameScreen">
+    <div class="top-bar">
+      <h2>lethargia</h2>
       <span class="dot" id="dot"></span>
-      <span id="statusText">Disconnected</span>
+      <span id="statusText">Connecting...</span>
+      <span style="margin-left:auto; font-size:12px; color:#6272a4">playing as <span id="myNameDisplay" style="color:#ff79c6"></span></span>
     </div>
-    <div class="btn-row">
-      <button onclick="connect()">✅ Connect</button>
-      <button id="btnDisconnect" onclick="disconnect()">❌ Disconnect</button>
-    </div>
-  </div>
 
-  <div class="card">
-    <div id="log"></div>
-  </div>
+    <div class="main-area">
+      <canvas id="gameCanvas"></canvas>
 
-  <div class="card">
-    <hr>
-    <div class="row">
-      <input id="chatInput" placeholder="Chat message..." />
-      <button onclick="sendChat()">💬 Send</button>
-    </div>
-    <div class="row">
-      <input id="usernameInput" placeholder="New username..." />
-      <input id="passwordInput" type="password" placeholder="Password (Aika only)" />
-      <button onclick="setUsername()">✏️ Set Name</button>
-    </div>
-    <div class="row">
-      <input id="xInput" class="small" placeholder="X" value="100" />
-      <input id="yInput" class="small" placeholder="Y" value="200" />
-      <button onclick="sendMove()">🕹️ Move</button>
+      <div class="side-panel">
+        <!-- Chat log -->
+        <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+          <div class="card-title">💬 chat</div>
+          <div id="log"></div>
+          <div class="chat-row" style="margin-top:8px;">
+            <input id="chatInput" placeholder="say something..." />
+            <button onclick="sendChat()">→</button>
+          </div>
+        </div>
+
+        <!-- Players -->
+        <div class="card">
+          <div class="card-title">👥 players online</div>
+          <div id="playerList"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card">
+          <div class="card-title">🕹️ controls</div>
+          <div class="hint">
+            Arrow keys / WASD — move<br>
+            Enter — send chat<br>
+            Click canvas to focus
+          </div>
+        </div>
+
+        <!-- Admin panel (Aika only) -->
+        <div class="card" id="adminPanel">
+          <div class="card-title">🔨 admin</div>
+          <div style="font-size:11px; color:#6272a4; margin-bottom:4px;">ban player by ID</div>
+          <div class="ban-row">
+            <input id="banInput" placeholder="player id..." type="number" />
+            <button onclick="banPlayer()">ban</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
-    let ws = null;
-
-    // Automatically use wss:// on https (Render), ws:// on http (localhost)
+    // ── Config ──
     const WS_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+    const SPEED = 4;
+    const PLAYER_RADIUS = 14;
+    const WORLD_W = 1600;
+    const WORLD_H = 1200;
 
+    // ── State ──
+    let ws = null;
+    let myId = null;
+    let myUsername = '';
+    let pendingPassword = '';
+    let players = {};       // id -> { id, username, x, y, color }
+    let keys = {};
+    let animFrame = null;
+    let lastSent = 0;
+
+    // ── Color palette for players ──
+    const COLORS = ['#ff79c6','#8be9fd','#50fa7b','#ffb86c','#bd93f9','#f1fa8c','#ff5555','#6be5fd'];
+    function colorFor(id) { return COLORS[(id - 1) % COLORS.length]; }
+
+    // ── Canvas ──
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width  = rect.width  - canvas.offsetLeft * 0;
+      canvas.height = rect.height;
+      // reflow — just get the element size
+      const cs = getComputedStyle(canvas);
+      canvas.width  = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // ── Encode / Decode ──
     function encode(obj) {
       return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
     }
-
     function decode(raw) {
       return JSON.parse(decodeURIComponent(escape(atob(raw))));
     }
 
-    function log(text, cls = 'msg-sys') {
+    // ── Auth screen username watcher ──
+    document.getElementById('authUsername').addEventListener('input', e => {
+      const wrap = document.getElementById('authPasswordWrap');
+      wrap.style.display = e.target.value.trim().toLowerCase() === 'aika' ? 'block' : 'none';
+    });
+
+    document.getElementById('authUsername').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinGame();
+    });
+
+    document.getElementById('authPassword').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinGame();
+    });
+
+    // ── Join ──
+    function joinGame() {
+      const username = document.getElementById('authUsername').value.trim();
+      const password = document.getElementById('authPassword').value;
+      if (!username) {
+        document.getElementById('authError').textContent = 'Username cannot be empty.';
+        return;
+      }
+      myUsername    = username;
+      pendingPassword = password;
+      document.getElementById('authError').textContent = '';
+      showGame();
+      connectWS();
+    }
+
+    function showGame() {
+      document.getElementById('authScreen').style.display = 'none';
+      const gs = document.getElementById('gameScreen');
+      gs.classList.add('visible');
+      document.getElementById('myNameDisplay').textContent = myUsername;
+      setTimeout(() => {
+        resizeCanvas();
+        canvas.focus();
+      }, 50);
+    }
+
+    // ── WebSocket ──
+    function connectWS() {
+      ws = new WebSocket(WS_URL);
+      ws.onopen  = () => { setStatus(true); };
+      ws.onclose = () => { setStatus(false); logMsg('Disconnected from server.', 'msg-err'); };
+      ws.onerror = () => { logMsg('Connection error.', 'msg-err'); };
+      ws.onmessage = handleMessage;
+    }
+
+    function setStatus(connected) {
+      document.getElementById('dot').className = 'dot' + (connected ? ' connected' : '');
+      document.getElementById('statusText').textContent = connected ? 'Connected' : 'Disconnected';
+    }
+
+    function handleMessage(e) {
+      let msg;
+      try { msg = decode(e.data); } catch { return; }
+
+      switch (msg.type) {
+        case 'init': {
+          myId = msg.id;
+          // Seed all existing players at random positions
+          msg.players.forEach(p => {
+            if (!players[p.id]) {
+              players[p.id] = {
+                id: p.id,
+                username: p.username,
+                x: Math.random() * (WORLD_W - 100) + 50,
+                y: Math.random() * (WORLD_H - 100) + 50,
+                color: colorFor(p.id),
+              };
+            }
+          });
+          // Set our own username
+          sendRaw({ type: 'set_username', username: myUsername, password: pendingPassword });
+          // Spawn us in center
+          if (!players[myId]) {
+            players[myId] = { id: myId, username: myUsername, x: WORLD_W/2, y: WORLD_H/2, color: colorFor(myId) };
+          }
+          updatePlayerList();
+          startLoop();
+          break;
+        }
+        case 'player_joined': {
+          const p = msg.player;
+          if (!players[p.id]) {
+            players[p.id] = {
+              id: p.id, username: p.username,
+              x: Math.random() * (WORLD_W - 100) + 50,
+              y: Math.random() * (WORLD_H - 100) + 50,
+              color: colorFor(p.id),
+            };
+          }
+          logMsg(`✅ ${p.username} joined`, 'msg-in');
+          updatePlayerList();
+          break;
+        }
+        case 'player_left': {
+          const leaving = players[msg.id];
+          logMsg(`❌ ${leaving ? leaving.username : 'Player ' + msg.id} left`, 'msg-in');
+          delete players[msg.id];
+          updatePlayerList();
+          break;
+        }
+        case 'player_updated': {
+          const p = msg.player;
+          if (players[p.id]) players[p.id].username = p.username;
+          else players[p.id] = { id: p.id, username: p.username, x: WORLD_W/2, y: WORLD_H/2, color: colorFor(p.id) };
+          if (p.id === myId) {
+            myUsername = p.username;
+            document.getElementById('myNameDisplay').textContent = myUsername;
+            if (myUsername === 'Aika') document.getElementById('adminPanel').classList.add('visible');
+          }
+          updatePlayerList();
+          break;
+        }
+        case 'move': {
+          if (msg.id !== myId && players[msg.id]) {
+            players[msg.id].x = msg.x;
+            players[msg.id].y = msg.y;
+          }
+          break;
+        }
+        case 'chat': {
+          logMsg(`💬 ${msg.from}: ${msg.text}`, 'msg-in');
+          break;
+        }
+        case 'error': {
+          logMsg(`⚠️ ${msg.message}`, 'msg-err');
+          // If auth failed for Aika, show error on auth screen or in log
+          if (msg.message.includes('reserved') || msg.message.includes('banned')) {
+            if (myUsername.toLowerCase() === 'aika') {
+              document.getElementById('gameScreen').classList.remove('visible');
+              document.getElementById('authScreen').style.display = 'flex';
+              document.getElementById('authError').textContent = msg.message;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    function sendRaw(obj) {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(encode(obj));
+    }
+
+    // ── Input ──
+    const MOVE_KEYS = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D']);
+
+    window.addEventListener('keydown', e => {
+      if (MOVE_KEYS.has(e.key)) {
+        keys[e.key] = true;
+        // Prevent arrow keys from scrolling the page
+        if (e.key.startsWith('Arrow')) e.preventDefault();
+      }
+    });
+
+    window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+    // ── Game loop ──
+    function startLoop() {
+      if (animFrame) cancelAnimationFrame(animFrame);
+      loop();
+    }
+
+    function loop() {
+      update();
+      draw();
+      animFrame = requestAnimationFrame(loop);
+    }
+
+    function update() {
+      if (!myId || !players[myId]) return;
+      const me = players[myId];
+      let dx = 0, dy = 0;
+
+      if (keys['ArrowLeft']  || keys['a'] || keys['A']) dx -= SPEED;
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) dx += SPEED;
+      if (keys['ArrowUp']    || keys['w'] || keys['W']) dy -= SPEED;
+      if (keys['ArrowDown']  || keys['s'] || keys['S']) dy += SPEED;
+
+      if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; } // normalize diagonal
+
+      if (dx !== 0 || dy !== 0) {
+        me.x = Math.max(PLAYER_RADIUS, Math.min(WORLD_W - PLAYER_RADIUS, me.x + dx));
+        me.y = Math.max(PLAYER_RADIUS, Math.min(WORLD_H - PLAYER_RADIUS, me.y + dy));
+
+        // Throttle sends to ~20/s
+        const now = Date.now();
+        if (now - lastSent > 50) {
+          sendRaw({ type: 'move', x: Math.round(me.x), y: Math.round(me.y) });
+          lastSent = now;
+        }
+      }
+    }
+
+    function draw() {
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      if (!myId || !players[myId]) return;
+
+      const me = players[myId];
+
+      // Camera: center on me, clamped to world
+      const camX = Math.max(0, Math.min(WORLD_W - W, me.x - W / 2));
+      const camY = Math.max(0, Math.min(WORLD_H - H, me.y - H / 2));
+
+      // Draw world border
+      ctx.save();
+      ctx.strokeStyle = 'rgba(189,147,249,0.3)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-camX, -camY, WORLD_W, WORLD_H);
+
+      // Grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      const GRID = 80;
+      const startX = Math.floor(camX / GRID) * GRID;
+      const startY = Math.floor(camY / GRID) * GRID;
+      for (let gx = startX; gx < camX + W + GRID; gx += GRID) {
+        ctx.beginPath();
+        ctx.moveTo(gx - camX, 0);
+        ctx.lineTo(gx - camX, H);
+        ctx.stroke();
+      }
+      for (let gy = startY; gy < camY + H + GRID; gy += GRID) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy - camY);
+        ctx.lineTo(W, gy - camY);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Draw players
+      Object.values(players).forEach(p => {
+        const sx = p.x - camX;
+        const sy = p.y - camY;
+
+        // Skip if off-screen
+        if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) return;
+
+        const isMe = p.id === myId;
+
+        // Glow
+        ctx.save();
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = isMe ? 18 : 10;
+
+        // Body
+        ctx.beginPath();
+        ctx.arc(sx, sy, PLAYER_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = isMe ? 1 : 0.85;
+        ctx.fill();
+
+        // Border for self
+        if (isMe) {
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // Name label
+        ctx.save();
+        ctx.font = `bold 11px 'Comic Sans MS', cursive`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#eee';
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 4;
+        ctx.fillText(p.username, sx, sy - PLAYER_RADIUS - 5);
+        ctx.restore();
+      });
+    }
+
+    // ── Player list UI ──
+    function updatePlayerList() {
+      const list = document.getElementById('playerList');
+      list.innerHTML = '';
+      Object.values(players).forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'player-entry';
+        div.innerHTML = `
+          <span class="player-color" style="background:${p.color}"></span>
+          <span style="color:${p.id === myId ? '#ff79c6' : '#eee'}">${escHtml(p.username)}</span>
+          <span style="margin-left:auto;color:#6272a4;font-size:10px">#${p.id}</span>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    // ── Chat ──
+    function logMsg(text, cls = 'msg-sys') {
       const box = document.getElementById('log');
       const line = document.createElement('div');
       line.className = cls;
@@ -247,77 +760,29 @@
       box.scrollTop = box.scrollHeight;
     }
 
-    function setStatus(connected) {
-      document.getElementById('dot').className = 'dot' + (connected ? ' connected' : '');
-      document.getElementById('statusText').textContent = connected ? 'Connected' : 'Disconnected';
-    }
-
-    function connect() {
-      if (ws && ws.readyState === WebSocket.OPEN) { log('Already connected.'); return; }
-      ws = new WebSocket(WS_URL);
-      ws.onopen  = () => { log('Connected!', 'msg-out'); setStatus(true); };
-      ws.onclose = () => { log('Disconnected.', 'msg-err'); setStatus(false); };
-      ws.onerror = () => { log('Connection error.', 'msg-err'); };
-      ws.onmessage = (e) => {
-        try {
-          const msg = decode(e.data);
-          if (msg.type === 'chat') {
-            log(`💬 ${msg.from}: ${msg.text}`, 'msg-in');
-          } else if (msg.type === 'move') {
-            log(`🕹️ Player ${msg.id} moved to (${msg.x}, ${msg.y})`, 'msg-in');
-          } else if (msg.type === 'player_joined') {
-            log(`✅ ${msg.player.username} joined`, 'msg-in');
-          } else if (msg.type === 'player_left') {
-            log(`❌ Player ${msg.id} left`, 'msg-in');
-          } else if (msg.type === 'player_updated') {
-            log(`✏️ Player is now "${msg.player.username}"`, 'msg-in');
-          } else if (msg.type === 'error') {
-            log(`⚠️ Error: ${msg.message}`, 'msg-err');
-          } else {
-            log(`← ${JSON.stringify(msg)}`, 'msg-in');
-          }
-        } catch {
-          log('← (bad message) ' + e.data, 'msg-err');
-        }
-      };
-    }
-
-    function disconnect() {
-      if (ws) ws.close();
-    }
-
-    function send(obj) {
-      if (!ws || ws.readyState !== WebSocket.OPEN) { log('Not connected!', 'msg-err'); return; }
-      ws.send(encode(obj));
-      if (obj.type === 'chat') log(`💬 You: ${obj.text}`, 'msg-out');
-      else log(`→ ${JSON.stringify(obj)}`, 'msg-out');
-    }
-
     function sendChat() {
-      const text = document.getElementById('chatInput').value.trim();
-      if (text) {
-        send({ type: 'chat', text });
-        document.getElementById('chatInput').value = '';
-      }
-    }
-
-    function setUsername() {
-      const u = document.getElementById('usernameInput').value.trim();
-      const p = document.getElementById('passwordInput').value;
-      if (u) send({ type: 'set_username', username: u, password: p });
-    }
-
-    function sendMove() {
-      send({
-        type: 'move',
-        x: parseFloat(document.getElementById('xInput').value),
-        y: parseFloat(document.getElementById('yInput').value),
-      });
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      sendRaw({ type: 'chat', text });
+      logMsg(`💬 You: ${text}`, 'msg-out');
+      input.value = '';
     }
 
     document.getElementById('chatInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendChat();
+      if (e.key === 'Enter') { sendChat(); e.preventDefault(); }
     });
+
+    // ── Admin ──
+    function banPlayer() {
+      const id = parseInt(document.getElementById('banInput').value);
+      if (id) sendRaw({ type: 'ban', id });
+    }
+
+    // ── Util ──
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
   </script>
 </body>
 </html>
