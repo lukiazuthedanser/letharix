@@ -8,40 +8,61 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8080;
 
-// --- HTTP server to serve the HTML client  ---
+// ── Canvas config ──
+const CANVAS_W = 200;
+const CANVAS_H = 150;
+const PIXEL_COOLDOWN = 5000; // ms between placements per player
+const CANVAS_FILE = path.join(__dirname, 'canvas.json');
+
+// ── Canvas state: flat array of color strings, index = y*W + x ──
+let canvasData = new Array(CANVAS_W * CANVAS_H).fill('#1a1a2e');
+
+// Load persisted canvas if it exists
+if (fs.existsSync(CANVAS_FILE)) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(CANVAS_FILE, 'utf8'));
+    if (Array.isArray(saved) && saved.length === CANVAS_W * CANVAS_H) {
+      canvasData = saved;
+      console.log('Canvas loaded from disk.');
+    }
+  } catch (e) {
+    console.warn('Could not load canvas:', e.message);
+  }
+}
+
+// Save canvas to disk periodically (every 30s)
+setInterval(() => {
+  fs.writeFile(CANVAS_FILE, JSON.stringify(canvasData), err => {
+    if (err) console.warn('Canvas save failed:', err.message);
+  });
+}, 30000);
+
+// ── HTTP server ──
 const httpServer = http.createServer((req, res) => {
   if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
-    const filePath = path.join(__dirname, 'index.html');
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        res.writeHead(500);
-        res.end('Error loading client');
-        return;
-      }
+    fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
+      if (err) { res.writeHead(500); res.end('Error'); return; }
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(data);
     });
   } else {
-    res.writeHead(404);
-    res.end('Not found');
+    res.writeHead(404); res.end('Not found');
   }
 });
 
-// --- WebSocket server on the same HTTP server ---
+// ── WebSocket server ──
 const wss = new WebSocketServer({ server: httpServer });
 
-const players = new Map();
+const players = new Map();       // ws -> player
 const bannedIPs = new Set();
 const rateLimits = new Map();
+const pixelCooldowns = new Map(); // playerId -> timestamp of last placement
 let nextPlayerId = 1;
 let aikaOwnerId = null;
 
-// Paste your generated bcrypt hash here
 const AIKA_PASSWORD_HASH = '$2b$12$aCuOl5THUQijIbI8YpPBbOV0UCpidtE/aeMWruzmvqMP1jNCPzA2e';
 
-// --- Rate limiting ---
-// Move packets are sent ~20/s, chat/actions are rare.
-// We use separate buckets: a loose one for moves, strict for everything else.
+// ── Rate limiting (chat/actions) ──
 const RATE_LIMIT_CHAT = 10;
 const RATE_WINDOW_CHAT = 5000;
 const RATE_LIMIT_MOVE = 30;
@@ -62,57 +83,46 @@ function checkRateLimit(ip, type) {
   return entry.count <= limit;
 }
 
-// --- Content filter ---
+// ── Content filter ──
 const BLOCKED_PATTERNS = [
-  /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/,  // emails
-  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/,              // IP addresses
-  /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/,                   // phone numbers
+  /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/,
+  /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/,
 ];
+function isBlocked(text) { return BLOCKED_PATTERNS.some(p => p.test(text)); }
 
-function isBlocked(text) {
-  return BLOCKED_PATTERNS.some(pattern => pattern.test(text));
-}
+// ── Encoding ──
+function encode(data) { return Buffer.from(JSON.stringify(data)).toString('base64'); }
+function decode(raw)  { return JSON.parse(Buffer.from(raw.toString(), 'base64').toString('utf8')); }
 
-// --- Encoding ---
-function encode(data) {
-  return Buffer.from(JSON.stringify(data)).toString('base64');
-}
-
-function decode(raw) {
-  return JSON.parse(Buffer.from(raw.toString(), 'base64').toString('utf8'));
-}
-
-// --- Broadcast / send ---
+// ── Broadcast / send ──
 function broadcast(data, excludeSocket = null) {
-  const message = encode(data);
-  wss.clients.forEach((client) => {
-    if (client !== excludeSocket && client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
+  const msg = encode(data);
+  wss.clients.forEach(client => {
+    if (client !== excludeSocket && client.readyState === WebSocket.OPEN) client.send(msg);
   });
 }
-
 function sendTo(ws, data) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(encode(data));
-  }
+  if (ws.readyState === WebSocket.OPEN) ws.send(encode(data));
 }
 
-// --- Logging ---
+// ── Logging ──
 function logMsg(type, playerId, username, extra = '') {
-  const time = new Date().toLocaleTimeString();
-  switch (type) {
-    case 'chat':   console.log(`[${time}] 💬 ${username}: ${extra}`); break;
-    case 'move':   console.log(`[${time}] 🕹️  ${username} moved to ${extra}`); break;
-    case 'rename': console.log(`[${time}] ✏️  Player ${playerId} is now "${extra}"`); break;
-    case 'join':   console.log(`[${time}] ✅ ${username} joined (id ${playerId}). Total: ${players.size}`); break;
-    case 'leave':  console.log(`[${time}] ❌ ${username} left (id ${playerId}). Total: ${players.size}`); break;
-    case 'ban':    console.log(`[${time}] 🔨 ${username} banned player ${extra}`); break;
-    case 'error':  console.warn(`[${time}] ⚠️  Player ${playerId}: ${extra}`); break;
-  }
+  const t = new Date().toLocaleTimeString();
+  const map = {
+    chat:   `[${t}] 💬 ${username}: ${extra}`,
+    move:   null, // skip move logs to reduce noise
+    rename: `[${t}] ✏️  Player ${playerId} is now "${extra}"`,
+    join:   `[${t}] ✅ ${username} joined (id ${playerId}). Total: ${players.size}`,
+    leave:  `[${t}] ❌ ${username} left (id ${playerId}). Total: ${players.size}`,
+    ban:    `[${t}] 🔨 ${username} banned ${extra}`,
+    pixel:  `[${t}] 🎨 ${username} placed pixel at ${extra}`,
+    error:  `[${t}] ⚠️  ${extra}`,
+  };
+  if (map[type]) console.log(map[type]);
 }
 
-// --- Ban ---
+// ── Ban ──
 function banPlayer(targetId, byUsername) {
   for (const [ws, p] of players.entries()) {
     if (p.id === targetId) {
@@ -126,24 +136,28 @@ function banPlayer(targetId, byUsername) {
   return false;
 }
 
+// ── Valid hex color ──
+function isValidColor(c) { return typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c); }
+
 wss.on('connection', (ws, req) => {
   const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
 
-  if (bannedIPs.has(ip)) {
-    ws.close();
-    return;
-  }
+  if (bannedIPs.has(ip)) { ws.close(); return; }
 
   const playerId = nextPlayerId++;
   const player = { id: playerId, username: `Player${playerId}`, ip };
   players.set(ws, player);
-
   logMsg('join', playerId, player.username);
 
+  // Send initial state: player list + full canvas
   sendTo(ws, {
     type: 'init',
     id: playerId,
     players: [...players.values()].map(p => ({ id: p.id, username: p.username })),
+    canvas: canvasData,
+    canvasW: CANVAS_W,
+    canvasH: CANVAS_H,
+    cooldown: PIXEL_COOLDOWN,
   });
 
   broadcast({ type: 'player_joined', player: { id: playerId, username: player.username } }, ws);
@@ -151,58 +165,78 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw, isBinary) => {
     if (isBinary) return;
 
-    if (!checkRateLimit(ip, msg.type)) {
-      if (msg.type !== 'move') {
-        sendTo(ws, { type: 'error', message: 'Slow down! You are sending too many messages.' });
-      }
-      return;
-    }
-
     let msg;
-    try {
-      msg = decode(raw);
-    } catch {
-      sendTo(ws, { type: 'error', message: 'Invalid message' });
+    try { msg = decode(raw); }
+    catch { sendTo(ws, { type: 'error', message: 'Invalid message' }); return; }
+
+    if (!checkRateLimit(ip, msg.type)) {
+      if (msg.type !== 'move') sendTo(ws, { type: 'error', message: 'Slow down!' });
       return;
     }
 
     switch (msg.type) {
+
       case 'chat': {
         const text = String(msg.text ?? '').trim().slice(0, 200);
         if (!text) break;
-
         if (isBlocked(text)) {
           sendTo(ws, { type: 'error', message: 'Message blocked: contains personal information.' });
-          logMsg('error', playerId, player.username, `blocked message: ${text}`);
           break;
         }
-
         logMsg('chat', playerId, player.username, text);
-        broadcast({ type: 'chat', from: player.username, text }, ws);
+        broadcast({ type: 'chat', from: player.username, text });
         break;
       }
 
       case 'move': {
         const x = Number(msg.x) || 0;
         const y = Number(msg.y) || 0;
-        logMsg('move', playerId, player.username, `(${x}, ${y})`);
         broadcast({ type: 'move', id: playerId, x, y }, ws);
+        break;
+      }
+
+      case 'place_pixel': {
+        const x = Math.floor(Number(msg.x));
+        const y = Math.floor(Number(msg.y));
+        const color = String(msg.color ?? '');
+
+        if (!isValidColor(color)) {
+          sendTo(ws, { type: 'error', message: 'Invalid color.' });
+          break;
+        }
+        if (x < 0 || x >= CANVAS_W || y < 0 || y >= CANVAS_H) {
+          sendTo(ws, { type: 'error', message: 'Out of bounds.' });
+          break;
+        }
+
+        const now = Date.now();
+        const lastPlaced = pixelCooldowns.get(playerId) || 0;
+        const remaining = PIXEL_COOLDOWN - (now - lastPlaced);
+        if (remaining > 0) {
+          sendTo(ws, { type: 'cooldown', remaining });
+          break;
+        }
+
+        canvasData[y * CANVAS_W + x] = color;
+        pixelCooldowns.set(playerId, now);
+        logMsg('pixel', playerId, player.username, `(${x},${y}) ${color}`);
+
+        broadcast({
+          type: 'pixel_placed',
+          x, y, color,
+          by: player.username,
+          id: playerId,
+        });
         break;
       }
 
       case 'set_username': {
         const newName = String(msg.username ?? '').trim().slice(0, 32);
-        if (!newName) {
-          sendTo(ws, { type: 'error', message: 'Username cannot be empty.' });
-          break;
-        }
+        if (!newName) { sendTo(ws, { type: 'error', message: 'Username cannot be empty.' }); break; }
 
         if (newName.toLowerCase() === 'aika') {
-          bcrypt.compare(String(msg.password ?? ''), AIKA_PASSWORD_HASH).then((match) => {
-            if (!match) {
-              sendTo(ws, { type: 'error', message: 'Username "Aika" is reserved.' });
-              return;
-            }
+          bcrypt.compare(String(msg.password ?? ''), AIKA_PASSWORD_HASH).then(match => {
+            if (!match) { sendTo(ws, { type: 'error', message: 'Username "Aika" is reserved.' }); return; }
             aikaOwnerId = playerId;
             logMsg('rename', playerId, player.username, newName);
             player.username = newName;
@@ -219,13 +253,23 @@ wss.on('connection', (ws, req) => {
 
       case 'ban': {
         if (player.username !== 'Aika' || player.id !== aikaOwnerId) {
-          sendTo(ws, { type: 'error', message: 'You do not have permission to ban.' });
+          sendTo(ws, { type: 'error', message: 'No permission.' });
           break;
         }
-        const targetId = Number(msg.id);
-        if (!banPlayer(targetId, player.username)) {
+        if (!banPlayer(Number(msg.id), player.username)) {
           sendTo(ws, { type: 'error', message: 'Player not found.' });
         }
+        break;
+      }
+
+      case 'clear_canvas': {
+        if (player.username !== 'Aika' || player.id !== aikaOwnerId) {
+          sendTo(ws, { type: 'error', message: 'No permission.' });
+          break;
+        }
+        canvasData.fill('#1a1a2e');
+        broadcast({ type: 'canvas_cleared', canvas: canvasData });
+        console.log(`[${new Date().toLocaleTimeString()}] 🗑️  Aika cleared the canvas.`);
         break;
       }
 
@@ -240,11 +284,7 @@ wss.on('connection', (ws, req) => {
     broadcast({ type: 'player_left', id: playerId });
   });
 
-  ws.on('error', (err) => {
-    console.error(`[ERROR] Player ${playerId}:`, err.message);
-  });
+  ws.on('error', err => console.error(`[ERROR] Player ${playerId}:`, err.message));
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`lethargia running on http://localhost:${PORT}`);
-});
+httpServer.listen(PORT, () => console.log(`lethargia running on http://localhost:${PORT}`));
