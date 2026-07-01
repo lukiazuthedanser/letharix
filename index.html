@@ -584,6 +584,8 @@
           break;
         }
         case 'error': {
+          // Silently ignore rate limit noise from move packets
+          if (msg.message && msg.message.includes('Slow down')) break;
           logMsg(`⚠️ ${msg.message}`, 'msg-err');
           // If auth failed for Aika, show error on auth screen or in log
           if (msg.message.includes('reserved') || msg.message.includes('banned')) {

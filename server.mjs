@@ -40,18 +40,26 @@ let aikaOwnerId = null;
 const AIKA_PASSWORD_HASH = '$2b$12$aCuOl5THUQijIbI8YpPBbOV0UCpidtE/aeMWruzmvqMP1jNCPzA2e';
 
 // --- Rate limiting ---
-const RATE_LIMIT = 10;
-const RATE_WINDOW = 5000;
+// Move packets are sent ~20/s, chat/actions are rare.
+// We use separate buckets: a loose one for moves, strict for everything else.
+const RATE_LIMIT_CHAT = 10;
+const RATE_WINDOW_CHAT = 5000;
+const RATE_LIMIT_MOVE = 30;
+const RATE_WINDOW_MOVE = 1000;
 
-function checkRateLimit(ip) {
-  const now = Date.now();
-  let entry = rateLimits.get(ip);
+function checkRateLimit(ip, type) {
+  const isMove = type === 'move';
+  const limit  = isMove ? RATE_LIMIT_MOVE  : RATE_LIMIT_CHAT;
+  const window = isMove ? RATE_WINDOW_MOVE : RATE_WINDOW_CHAT;
+  const key    = ip + (isMove ? '_move' : '_chat');
+  const now    = Date.now();
+  let entry = rateLimits.get(key);
   if (!entry || now > entry.resetAt) {
-    entry = { count: 0, resetAt: now + RATE_WINDOW };
-    rateLimits.set(ip, entry);
+    entry = { count: 0, resetAt: now + window };
+    rateLimits.set(key, entry);
   }
   entry.count++;
-  return entry.count <= RATE_LIMIT;
+  return entry.count <= limit;
 }
 
 // --- Content filter ---
@@ -143,8 +151,10 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw, isBinary) => {
     if (isBinary) return;
 
-    if (!checkRateLimit(ip)) {
-      sendTo(ws, { type: 'error', message: 'Slow down! You are sending too many messages.' });
+    if (!checkRateLimit(ip, msg.type)) {
+      if (msg.type !== 'move') {
+        sendTo(ws, { type: 'error', message: 'Slow down! You are sending too many messages.' });
+      }
       return;
     }
 
