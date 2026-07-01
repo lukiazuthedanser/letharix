@@ -214,6 +214,7 @@
     </div>
     <div class="row">
       <input id="usernameInput" placeholder="New username..." />
+      <input id="passwordInput" type="password" placeholder="Password (Aika only)" />
       <button onclick="setUsername()">✏️ Set Name</button>
     </div>
     <div class="row">
@@ -302,7 +303,8 @@
 
     function setUsername() {
       const u = document.getElementById('usernameInput').value.trim();
-      if (u) send({ type: 'set_username', username: u });
+      const p = document.getElementById('passwordInput').value;
+      if (u) send({ type: 'set_username', username: u, password: p });
     }
 
     function sendMove() {
